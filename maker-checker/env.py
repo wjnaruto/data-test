@@ -1,14 +1,24 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
-from sqlmodel import SQLModel
-
-from models.maker_checker import ALEMBIC_TRACKED_TABLES
-from models import maker_checker  # noqa: F401
+from sqlalchemy.ext.asyncio import async_engine_from_config
+try:
+    import asyncpg
+    from google.cloud.sql.connector import Connector, IPTypes
+    from sqlmodel import SQLModel
+    from core.config import settings
+    from models.maker_checker import ALEMBIC_TRACKED_TABLES
+    from models import maker_checker  # noqa: F401
+except ModuleNotFoundError as exc:
+    raise RuntimeError(
+        "Alembic migration dependencies are missing. "
+        "Install requirements-migration.txt in the environment used to run Alembic."
+    ) from exc
 
 
 config = context.config
@@ -55,7 +65,70 @@ def get_url() -> str:
     url = os.getenv("ALEMBIC_DATABASE_URL")
     if url:
         return url
-    return config.get_main_option("sqlalchemy.url")
+
+    if os.getenv("ENV") == "local":
+        return "postgresql+asyncpg://@localhost:5432/postgres"
+
+    user = "postgres" if settings.connect_type == "postgres" else (settings.iam_user or "postgres")
+    database_name = settings.db or "postgres"
+    return f"postgresql+asyncpg://{user}@localhost/{database_name}"
+
+
+def use_explicit_database_url() -> bool:
+    return bool(os.getenv("ALEMBIC_DATABASE_URL"))
+
+
+def do_run_migrations(connection) -> None:
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_object=include_object,
+        compare_type=True,
+        compare_server_default=True,
+    )
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+async def get_project_async_creator():
+    if os.getenv("ENV") == "local":
+        async def local_creator():
+            return await asyncpg.connect(
+                user="",
+                password=None,
+                database="postgres",
+                host="localhost",
+                port=5432,
+            )
+
+        return None, local_creator
+
+    connector = Connector()
+
+    if settings.connect_type == "postgres":
+        async def cloud_creator():
+            return await connector.connect_async(
+                settings.instance_connection_name,
+                driver="asyncpg",
+                user="postgres",
+                password=settings.postgres_key,
+                db=settings.db,
+                ip_type=IPTypes.PRIVATE,
+            )
+    else:
+        async def cloud_creator():
+            return await connector.connect_async(
+                settings.instance_connection_name,
+                driver="asyncpg",
+                user=settings.iam_user,
+                password=None,
+                db=settings.db,
+                ip_type=IPTypes.PRIVATE,
+                enable_iam_auth=True,
+            )
+
+    return connector, cloud_creator
 
 
 def run_migrations_offline() -> None:
@@ -74,7 +147,7 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def run_migrations_online() -> None:
+def run_migrations_online_sync() -> None:
     configuration = config.get_section(config.config_ini_section, {})
     configuration["sqlalchemy.url"] = get_url()
 
@@ -86,19 +159,40 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            include_object=include_object,
-            compare_type=True,
-            compare_server_default=True,
-        )
+        do_run_migrations(connection)
 
-        with context.begin_transaction():
-            context.run_migrations()
+
+async def run_migrations_online_async() -> None:
+    configuration = config.get_section(config.config_ini_section, {})
+    configuration["sqlalchemy.url"] = get_url()
+
+    connector = None
+    async_creator = None
+    if not use_explicit_database_url():
+        connector, async_creator = await get_project_async_creator()
+
+    connectable = async_engine_from_config(
+        configuration,
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+        future=True,
+        async_creator=async_creator,
+    )
+
+    try:
+        async with connectable.connect() as connection:
+            await connection.run_sync(do_run_migrations)
+    finally:
+        await connectable.dispose()
+        if connector is not None:
+            await asyncio.get_running_loop().run_in_executor(None, connector.close)
 
 
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    run_migrations_online()
+    url = get_url()
+    if use_explicit_database_url() and "+asyncpg" not in url:
+        run_migrations_online_sync()
+    else:
+        asyncio.run(run_migrations_online_async())
