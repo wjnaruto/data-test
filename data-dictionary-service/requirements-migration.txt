@@ -1,0 +1,7 @@
+alembic
+sqlalchemy
+psycopg[binary]
+sqlmodel
+asyncpg
+google-cloud-sql-connector
+pydantic-settings
