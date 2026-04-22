@@ -43,7 +43,16 @@ async def get_tables(page, size, domain_name, tenant_name, table_name):
             te.table_metadata as table_json,
             de.metadata as domain_json,
             te2.metadata as tenant_json,
-            de.id
+            de.id,
+            te.requester_id,
+            te.approver_id,
+            te.requester_ts,
+            te.approver_ts,
+            te.version_seq,
+            te.version_label,
+            te.dictionary_action,
+            te.approval_status,
+            te.record_status
         from
             table_entity te
                 join domain_entity de on te.domain_id = de.id

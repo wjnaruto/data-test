@@ -118,7 +118,16 @@ async def get_attributes_by_table_id(page, size, table_id):
     total_count = await db.fetch_jsonb(count_query, table_id)
 
     data_query = """
-        SELECT ae.metadata
+        SELECT ae.metadata,
+               ae.requester_id,
+               ae.approver_id,
+               ae.requester_ts,
+               ae.approver_ts,
+               ae.version_seq,
+               ae.version_label,
+               ae.dictionary_action,
+               ae.approval_status,
+               ae.record_status
         FROM attribute_entity ae
         where ae.table_id = $1 \
     """

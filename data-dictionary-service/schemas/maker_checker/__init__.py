@@ -1,5 +1,7 @@
 from .submit import (
+    AttributeMetadataInput,
     AttributeSubmitItem,
+    DatasetMetadataInput,
     DatasetSubmitItem,
     SubmitConflictItem,
     SubmitRequest,
@@ -7,10 +9,11 @@ from .submit import (
 )
 
 __all__ = [
+    "AttributeMetadataInput",
     "AttributeSubmitItem",
+    "DatasetMetadataInput",
     "DatasetSubmitItem",
     "SubmitConflictItem",
     "SubmitRequest",
     "SubmitResponse",
 ]
-

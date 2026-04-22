@@ -24,6 +24,10 @@ from db.repositories.maker_checker import (
     TablePendingRepository,
 )
 from services.access_control import UserAccessContext
+from services.maker_checker.metadata_transformer import (
+    attribute_input_to_metadata,
+    dataset_input_to_table_metadata,
+)
 
 
 logger = get_logger(__name__)
@@ -170,7 +174,7 @@ class SubmitService:
                 continue
 
             if dataset_item.action == "A":
-                table_name = dataset_item.tableMetadata.get("tableName") or dataset_item.tableMetadata.get("Table Name")
+                table_name = dataset_item.tableMetadata.tableName
                 if not table_name:
                     raise HTTPException(status_code=400, detail="Dataset add requires tableName in tableMetadata.")
                 pending_conflict = await self.table_pending_repository.find_pending_conflict_by_business_key(
@@ -232,7 +236,7 @@ class SubmitService:
                     dataset_ids_by_client_ref,
                     payload.tenantUniqueId,
                 )
-                field_name = attribute_item.metadata.get("Field Name") or attribute_item.metadata.get("fieldName")
+                field_name = attribute_item.metadata.fieldName
                 if not table_id:
                     raise HTTPException(status_code=400, detail="Attribute add requires tableId or datasetClientRef.")
                 if not field_name:
@@ -286,6 +290,7 @@ class SubmitService:
 
         normalized_metadata = self._normalize_dataset_metadata(
             metadata=dataset_item.tableMetadata,
+            base_metadata=current_snapshot,
             proposed_table_id=proposed_table_id,
             payload=payload,
             user=user,
@@ -354,6 +359,7 @@ class SubmitService:
 
         normalized_metadata = self._normalize_attribute_metadata(
             metadata=attribute_item.metadata,
+            base_metadata=current_snapshot,
             attribute_id=target_attribute_id,
             dataset_id=resolved_table_id,
             payload=payload,
@@ -378,14 +384,16 @@ class SubmitService:
 
     def _normalize_dataset_metadata(
         self,
-        metadata: Dict[str, Any],
+        metadata,
+        base_metadata: Optional[Dict[str, Any]],
         proposed_table_id: Optional[str],
         payload: SubmitRequest,
         user: UserAccessContext,
         is_add: bool,
         is_delete: bool,
     ) -> Dict[str, Any]:
-        normalized = dict(metadata)
+        normalized = dict(base_metadata or {})
+        normalized.update(dataset_input_to_table_metadata(metadata))
         timestamp = self._current_epoch_millis()
         if proposed_table_id:
             normalized["id"] = proposed_table_id
@@ -402,7 +410,8 @@ class SubmitService:
 
     def _normalize_attribute_metadata(
         self,
-        metadata: Dict[str, Any],
+        metadata,
+        base_metadata: Optional[Dict[str, Any]],
         attribute_id: Optional[str],
         dataset_id: Optional[str],
         payload: SubmitRequest,
@@ -410,7 +419,8 @@ class SubmitService:
         is_add: bool,
         is_delete: bool,
     ) -> Dict[str, Any]:
-        normalized = dict(metadata)
+        normalized = dict(base_metadata or {})
+        normalized.update(attribute_input_to_metadata(metadata))
         timestamp = self._current_epoch_millis()
         if attribute_id:
             normalized["id"] = attribute_id
@@ -439,7 +449,7 @@ class SubmitService:
         tenant_unique_id: str,
         require_for_add: bool = False,
     ) -> Optional[str]:
-        metadata_table_id = attribute_item.metadata.get("tableId")
+        metadata_table_id = attribute_item.metadata.tableId
 
         if attribute_item.datasetClientRef:
             resolved_table_id = dataset_ids_by_client_ref.get(attribute_item.datasetClientRef)

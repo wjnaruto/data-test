@@ -25,14 +25,15 @@
           "action": "A",
           "tableMetadata": {
             "tableName": "TEST_POSITION_DATASET_A",
-            "Table Name": "TEST_POSITION_DATASET_A",
-            "Table Description": "Local test dataset A created through submit API.",
-            "Product": "Custody",
-            "Data Classification": "Internal",
-            "Country Of Origin": "UK",
-            "Update Frequency": "Daily",
-            "Client View": "Yes",
-            "Business Owner ID": "u10001",
+            "physicalTableName": "test_position_dataset_a",
+            "tableDescription": "Local test dataset A created through submit API.",
+            "domainName": "Custody",
+            "dataClassification": "Internal",
+            "countryOfOrigin": "UK",
+            "updateFrequency": "Daily",
+            "clientView": "Yes",
+            "businessOwnerId": "u10001",
+            "itOwnerId": "u20001",
             "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
             "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
           }
@@ -42,14 +43,15 @@
           "action": "A",
           "tableMetadata": {
             "tableName": "TEST_TRANSACTION_DATASET_B",
-            "Table Name": "TEST_TRANSACTION_DATASET_B",
-            "Table Description": "Local test dataset B created through submit API.",
-            "Product": "Custody",
-            "Data Classification": "Internal",
-            "Country Of Origin": "UK",
-            "Update Frequency": "Daily",
-            "Client View": "Yes",
-            "Business Owner ID": "u10001",
+            "physicalTableName": "test_transaction_dataset_b",
+            "tableDescription": "Local test dataset B created through submit API.",
+            "domainName": "Custody",
+            "dataClassification": "Internal",
+            "countryOfOrigin": "UK",
+            "updateFrequency": "Daily",
+            "clientView": "Yes",
+            "businessOwnerId": "u10001",
+            "itOwnerId": "u20001",
             "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
             "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
           }
@@ -68,9 +70,9 @@
           "entityId": "EXISTING_DATASET_ID_1_REPLACE_ME",
           "currentVersionSeq": 1,
           "tableMetadata": {
-            "Table Description": "Updated dataset description from submit API test.",
-            "Update Frequency": "Weekly",
-            "Client View": "No",
+            "tableDescription": "Updated dataset description from submit API test.",
+            "updateFrequency": "Weekly",
+            "clientView": "No",
             "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
             "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
           }
@@ -80,9 +82,9 @@
           "entityId": "EXISTING_DATASET_ID_2_REPLACE_ME",
           "currentVersionSeq": 1,
           "tableMetadata": {
-            "Table Description": "Second updated dataset description from submit API test.",
-            "Update Frequency": "Monthly",
-            "Client View": "Yes",
+            "tableDescription": "Second updated dataset description from submit API test.",
+            "updateFrequency": "Monthly",
+            "clientView": "Yes",
             "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
             "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
           }
@@ -130,15 +132,14 @@
           "action": "A",
           "metadata": {
             "tableId": "EXISTING_DATASET_ID_1_REPLACE_ME",
-            "Field Name": "test_position_id",
-            "Field Description": "Local test attribute for position id.",
-            "Physical Field Name": "test_position_id",
-            "Data Type": "varchar",
-            "Length": "36",
-            "Is Primary Key": "Y",
-            "Nullable": "N",
-            "Data Classification": "Internal",
-            "Client View": "Yes",
+            "fieldName": "test_position_id",
+            "fieldDescriptionLong": "Local test attribute for position id.",
+            "fieldDescriptionShort": "Position id.",
+            "physicalFieldName": "test_position_id",
+            "dataType": "varchar",
+            "isPrimaryKey": "Y",
+            "dataClassification": "Internal",
+            "clientView": "Yes",
             "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
             "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
           }
@@ -147,15 +148,14 @@
           "action": "A",
           "metadata": {
             "tableId": "EXISTING_DATASET_ID_1_REPLACE_ME",
-            "Field Name": "test_position_amount",
-            "Field Description": "Local test attribute for position amount.",
-            "Physical Field Name": "test_position_amount",
-            "Data Type": "numeric",
-            "Length": "18,2",
-            "Is Primary Key": "N",
-            "Nullable": "Y",
-            "Data Classification": "Internal",
-            "Client View": "Yes",
+            "fieldName": "test_position_amount",
+            "fieldDescriptionLong": "Local test attribute for position amount.",
+            "fieldDescriptionShort": "Position amount.",
+            "physicalFieldName": "test_position_amount",
+            "dataType": "numeric",
+            "isPrimaryKey": "N",
+            "dataClassification": "Internal",
+            "clientView": "Yes",
             "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
             "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
           }
@@ -174,9 +174,8 @@
           "entityId": "EXISTING_ATTRIBUTE_ID_1_REPLACE_ME",
           "currentVersionSeq": 1,
           "metadata": {
-            "Field Description": "Updated field description from submit API test.",
-            "Nullable": "N",
-            "Client View": "No",
+            "fieldDescriptionLong": "Updated field description from submit API test.",
+            "clientView": "No",
             "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
             "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
           }
@@ -186,9 +185,8 @@
           "entityId": "EXISTING_ATTRIBUTE_ID_2_REPLACE_ME",
           "currentVersionSeq": 1,
           "metadata": {
-            "Field Description": "Second updated field description from submit API test.",
-            "Nullable": "Y",
-            "Client View": "Yes",
+            "fieldDescriptionLong": "Second updated field description from submit API test.",
+            "clientView": "Yes",
             "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
             "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
           }

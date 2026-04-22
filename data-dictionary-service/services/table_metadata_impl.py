@@ -26,12 +26,27 @@ class TableMetadataService:
             result = []
             for record in records:
                 domain_name = json_lib.loads(record['domain_json']).get('name')
-                table_vo = TableVO.from_record(json_lib.loads(record['table_json'])).copy(update={"domainName": domain_name})
+                table_metadata = json_lib.loads(record['table_json'])
+                table_metadata.update(self._governance_fields(record))
+                table_vo = TableVO.from_record(table_metadata).copy(update={"domainName": domain_name})
                 result.append(table_vo)
             return TableResponseVO(tables=result, total=total_count, page=page, pageSize=size)
         except Exception as e:
             logger.error(f"Error fetching Table data: {e}")
             raise HTTPException(status_code=500, detail="Internal server error")
+
+    def _governance_fields(self, record):
+        return {
+            "requester_id": record.get("requester_id"),
+            "approver_id": record.get("approver_id"),
+            "requester_ts": record.get("requester_ts"),
+            "approver_ts": record.get("approver_ts"),
+            "version_seq": record.get("version_seq"),
+            "version_label": record.get("version_label"),
+            "dictionary_action": record.get("dictionary_action"),
+            "approval_status": record.get("approval_status"),
+            "record_status": record.get("record_status"),
+        }
 
     async def generate_excel_for_tables(self, page, size, domain_name, tenant_name, table_name):
         # Fetch table data

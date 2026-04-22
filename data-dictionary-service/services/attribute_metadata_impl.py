@@ -7,7 +7,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 
 from core.config import get_logger
-from data import attribute_queries
+from db.queries import attribute_queries
 from models.models import AttributeVO, AttributeResponseVO
 
 
@@ -26,13 +26,28 @@ class AttributeMetadataService:
 
             result = []
             for record in records:
-                attribute_vo = AttributeVO.from_record(record["metadata"])
+                metadata = dict(record["metadata"])
+                metadata.update(self._governance_fields(record))
+                attribute_vo = AttributeVO.from_record(metadata)
                 result.append(attribute_vo)
 
             return AttributeResponseVO(attributes=result, total=total_count, page=page, pageSize=size)
         except Exception as ex:
             logger.error("Error fetching Table data: %s", ex)
             raise HTTPException(status_code=500, detail="Internal server error")
+
+    def _governance_fields(self, record):
+        return {
+            "requester_id": record.get("requester_id"),
+            "approver_id": record.get("approver_id"),
+            "requester_ts": record.get("requester_ts"),
+            "approver_ts": record.get("approver_ts"),
+            "version_seq": record.get("version_seq"),
+            "version_label": record.get("version_label"),
+            "dictionary_action": record.get("dictionary_action"),
+            "approval_status": record.get("approval_status"),
+            "record_status": record.get("record_status"),
+        }
 
     async def generate_excel_for_attributes(self, table_id):
         attribute_response = await self.get_attributes(1, 999, table_id)

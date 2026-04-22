@@ -101,6 +101,15 @@ class TableVO(BaseModel):
     deleted: Optional[bool] = Field(None, description="Indicates if the table is deleted")
     createdAt: int = Field(None, description="The timestamp when the table was created")
     attributes: List[Dict[str, Any]] = Field(default_factory=list, description="Attributes of the table")
+    requesterId: str = Field("", description="Requester user id")
+    approverId: str = Field("", description="Approver user id")
+    requesterTs: Optional[Any] = Field(None, description="Requester submission timestamp")
+    approverTs: Optional[Any] = Field(None, description="Approver action timestamp")
+    versionSeq: Optional[int] = Field(None, description="Sequential version number")
+    versionLabel: str = Field("", description="Display version label")
+    dictionaryAction: str = Field("", description="Dictionary action")
+    approvalStatus: str = Field("", description="Approval status")
+    recordStatus: str = Field("", description="Record status")
 
     @classmethod
     def from_record(cls, metadata):
@@ -122,14 +131,23 @@ class TableVO(BaseModel):
             dataLocalisation=metadata.get("Data Localisation", ""),
             updateFrequency=metadata.get("Update Frequency", ""),
             dataClassification=metadata.get("Data Classification", ""),
-            clientView=str(metadata.get("Client view", "")),
+            clientView=str(metadata.get("Client view", metadata.get("Client View", ""))),
             businessOwnerId=str(metadata.get("Business Owner ID", "")),
-            itOwnerId=str(metadata.get("IT owner ID", "")),
+            itOwnerId=str(metadata.get("IT owner ID", metadata.get("IT Owner ID", ""))),
             updatedAt=metadata.get("updatedAt", ""),
             updatedBy=metadata.get("updatedBy", ""),
             deleted=metadata.get("deleted", None),
             createdAt=metadata.get("createdAt", ""),
             attributes=metadata.get("attributes", []),
+            requesterId=metadata.get("requesterId", metadata.get("requester_id", "")),
+            approverId=metadata.get("approverId", metadata.get("approver_id", "")),
+            requesterTs=metadata.get("requesterTs", metadata.get("requester_ts", None)),
+            approverTs=metadata.get("approverTs", metadata.get("approver_ts", None)),
+            versionSeq=metadata.get("versionSeq", metadata.get("version_seq", None)),
+            versionLabel=metadata.get("versionLabel", metadata.get("version_label", "")),
+            dictionaryAction=metadata.get("dictionaryAction", metadata.get("dictionary_action", "")),
+            approvalStatus=metadata.get("approvalStatus", metadata.get("approval_status", "")),
+            recordStatus=metadata.get("recordStatus", metadata.get("record_status", "")),
         )
 
 
@@ -172,6 +190,15 @@ class AttributeVO(BaseModel):
     createdAt: int = Field(None, description="The timestamp when the attribute was created")
     updatedAt: int = Field(None, description="The timestamp when the attribute was last updated")
     updatedBy: str = Field("", description="The user who last updated the attribute")
+    requesterId: str = Field("", description="Requester user id")
+    approverId: str = Field("", description="Approver user id")
+    requesterTs: Optional[Any] = Field(None, description="Requester submission timestamp")
+    approverTs: Optional[Any] = Field(None, description="Approver action timestamp")
+    versionSeq: Optional[int] = Field(None, description="Sequential version number")
+    versionLabel: str = Field("", description="Display version label")
+    dictionaryAction: str = Field("", description="Dictionary action")
+    approvalStatus: str = Field("", description="Approval status")
+    recordStatus: str = Field("", description="Record status")
 
     @classmethod
     def from_record(cls, metadata):
@@ -196,13 +223,22 @@ class AttributeVO(BaseModel):
             isHsbcBde=metadata.get("Is HSBC BDE", ""),
             HSBCAttributeId=metadata.get("HSBC Attribute ID", ""),
             dataClassification=metadata.get("Data Classification", ""),
-            clientView=str(metadata.get("Client view", "")),
+            clientView=str(metadata.get("Client view", metadata.get("Client View", ""))),
             businessOwnerId=str(metadata.get("Business Owner ID", "")),
-            itOwnerId=str(metadata.get("IT owner ID", "")),
+            itOwnerId=str(metadata.get("IT owner ID", metadata.get("IT Owner ID", ""))),
             deleted=metadata.get("deleted", None),
             createdAt=metadata.get("createdAt", None),
             updatedAt=metadata.get("updatedAt", None),
             updatedBy=metadata.get("updatedBy", ""),
+            requesterId=metadata.get("requesterId", metadata.get("requester_id", "")),
+            approverId=metadata.get("approverId", metadata.get("approver_id", "")),
+            requesterTs=metadata.get("requesterTs", metadata.get("requester_ts", None)),
+            approverTs=metadata.get("approverTs", metadata.get("approver_ts", None)),
+            versionSeq=metadata.get("versionSeq", metadata.get("version_seq", None)),
+            versionLabel=metadata.get("versionLabel", metadata.get("version_label", "")),
+            dictionaryAction=metadata.get("dictionaryAction", metadata.get("dictionary_action", "")),
+            approvalStatus=metadata.get("approvalStatus", metadata.get("approval_status", "")),
+            recordStatus=metadata.get("recordStatus", metadata.get("record_status", "")),
         )
 
 
