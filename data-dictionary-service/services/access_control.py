@@ -2,20 +2,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
-from urllib.error import HTTPError, URLError
+from urllib.error import URLError
 
-from fastapi import Header, HTTPException
+from fastapi import HTTPException, Security
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import jwt
 from jwt import PyJWKClient
 from jwt.exceptions import InvalidTokenError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
+from db.session import db
 from db.repositories.maker_checker import TenantRoleMappingRepository
 
 
 _jwk_client: Optional[PyJWKClient] = None
 _tenant_role_mapping_repository = TenantRoleMappingRepository()
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 @dataclass
@@ -25,20 +27,53 @@ class AuthenticatedUser:
     groups: List[str]
 
 
-async def get_authenticated_user(
-    authorization: Optional[str] = Header(default=None, alias="Authorization"),
-) -> AuthenticatedUser:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=401,
-            detail="Bearer access token is required for submit.",
+@dataclass
+class TenantRole:
+    domain_id: str
+    tenant_unique_id: str
+    role_type: str
+    ad_group_name: str
+
+
+@dataclass
+class UserAccessContext:
+    user_id: str
+    user_name: str
+    groups: List[str]
+    roles: List[TenantRole]
+
+    def has_role(self, tenant_unique_id: str, role_type: str) -> bool:
+        expected_role = role_type.upper()
+        return any(
+            role.tenant_unique_id == tenant_unique_id and role.role_type == expected_role
+            for role in self.roles
         )
 
-    token = authorization[len("Bearer ") :].strip()
-    if not token:
-        raise HTTPException(status_code=401, detail="Bearer access token is required for submit.")
+    def require_role(self, tenant_unique_id: str, role_type: str) -> None:
+        expected_role = role_type.upper()
+        if not self.has_role(tenant_unique_id, expected_role):
+            raise HTTPException(
+                status_code=403,
+                detail=f"User does not have {expected_role} role for tenant {tenant_unique_id}.",
+            )
 
-    claims = await _resolve_token_claims(token)
+    def require_requester(self, tenant_unique_id: str) -> None:
+        self.require_role(tenant_unique_id, "REQUESTER")
+
+    def require_approver(self, tenant_unique_id: str) -> None:
+        self.require_role(tenant_unique_id, "APPROVER")
+
+
+async def get_authenticated_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(bearer_scheme),
+) -> AuthenticatedUser:
+    if credentials is None or credentials.scheme.lower() != "bearer" or not credentials.credentials:
+        raise HTTPException(
+            status_code=401,
+            detail="Bearer access token is required.",
+        )
+
+    claims = await _resolve_token_claims(credentials.credentials)
     user_id = claims.get(settings.auth_user_id_claim) or claims.get("sub")
     user_name = (
         claims.get(settings.auth_user_name_claim)
@@ -58,23 +93,32 @@ async def get_authenticated_user(
     )
 
 
-async def validate_requester_tenant_access(session: AsyncSession, tenant_unique_id: str, user: AuthenticatedUser) -> None:
-    mapping = await _tenant_role_mapping_repository.get_active_mapping(
-        session,
-        tenant_unique_id=tenant_unique_id,
-        role_type="REQUESTER",
-    )
-    if mapping is None:
-        raise HTTPException(
-            status_code=403,
-            detail=f"No active requester role mapping found for tenant {tenant_unique_id}.",
+async def get_current_access_context(
+    user: AuthenticatedUser = Security(get_authenticated_user),
+) -> UserAccessContext:
+    if db.engine is None:
+        raise HTTPException(status_code=500, detail="Database engine is not initialized.")
+
+    async with db.session() as session:
+        mappings = await _tenant_role_mapping_repository.get_active_mappings_for_groups(
+            session=session,
+            groups=user.groups,
         )
 
-    if mapping.ad_group_name not in user.groups:
-        raise HTTPException(
-            status_code=403,
-            detail=f"User does not belong to the requester AD group for tenant {tenant_unique_id}.",
-        )
+    return UserAccessContext(
+        user_id=user.user_id,
+        user_name=user.user_name,
+        groups=user.groups,
+        roles=[
+            TenantRole(
+                domain_id=mapping.domain_id,
+                tenant_unique_id=mapping.tenant_unique_id,
+                role_type=mapping.role_type,
+                ad_group_name=mapping.ad_group_name,
+            )
+            for mapping in mappings
+        ],
+    )
 
 
 async def _resolve_token_claims(token: str) -> Dict[str, Any]:

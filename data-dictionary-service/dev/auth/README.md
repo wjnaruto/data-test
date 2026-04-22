@@ -31,10 +31,9 @@ py -m http.server 9100
 
 ## Token scenarios
 
-- `requester_tenant_001`
-- `checker_tenant_001`
-- `maker_checker_tenant_001`
-- `requester_tenant_002`
-- `no_groups_user`
+- `custody_unity_requester`
+- `custody_unity_approver`
+- `geneva_requester`
+- `geneva_approver`
 
 All tokens are RS256 JWT access tokens and include the `groups` claim.

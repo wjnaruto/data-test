@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
-from schemas.auth import AuthMeResponse
-from services.access_control import AuthenticatedUser, get_authenticated_user
+from schemas.auth import AuthMeResponse, TenantRoleResponse
+from services.access_control import UserAccessContext, get_current_access_context
 
 
 router = APIRouter()
@@ -13,14 +13,24 @@ router = APIRouter()
     tags=["Authentication"],
     summary="Get authenticated user from bearer token",
     description=(
-        "Validate the JWT bearer access token using JWKS and return the resolved user identity and groups claim."
+        "Validate the JWT bearer access token using JWKS and return the resolved user identity, "
+        "groups claim, and Data Dictionary tenant roles."
     ),
 )
 async def get_auth_me(
-    user: AuthenticatedUser = Depends(get_authenticated_user),
+    access: UserAccessContext = Depends(get_current_access_context),
 ) -> AuthMeResponse:
     return AuthMeResponse(
-        userId=user.user_id,
-        userName=user.user_name,
-        groups=user.groups,
+        userId=access.user_id,
+        userName=access.user_name,
+        groups=access.groups,
+        roles=[
+            TenantRoleResponse(
+                domainId=role.domain_id,
+                tenantUniqueId=role.tenant_unique_id,
+                roleType=role.role_type,
+                adGroupName=role.ad_group_name,
+            )
+            for role in access.roles
+        ],
     )

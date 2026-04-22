@@ -4,7 +4,6 @@ from . import (
     data_tool_queries,
     domain_queries,
     glossary_queries,
-    submit_queries,
     table_queries,
     tenant_queries,
 )
@@ -15,7 +14,6 @@ __all__ = [
     "data_tool_queries",
     "domain_queries",
     "glossary_queries",
-    "submit_queries",
     "table_queries",
     "tenant_queries",
 ]

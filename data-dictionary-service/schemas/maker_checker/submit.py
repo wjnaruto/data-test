@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 DictionaryAction = Literal["A", "U", "D"]
@@ -16,11 +16,11 @@ class DatasetSubmitItem(BaseModel):
     tableMetadata: Dict[str, Any] = Field(default_factory=dict, description="Dataset payload")
     currentVersionSeq: Optional[int] = Field(default=None, description="Current version for optimistic checks")
 
-    @root_validator
-    def validate_entity_id(cls, values):
-        if values.get("action") in {"U", "D"} and not values.get("entityId"):
+    @model_validator(mode="after")
+    def validate_entity_id(self):
+        if self.action in {"U", "D"} and not self.entityId:
             raise ValueError("entityId is required for dataset update/delete")
-        return values
+        return self
 
 
 class AttributeSubmitItem(BaseModel):
@@ -30,11 +30,11 @@ class AttributeSubmitItem(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Attribute payload")
     currentVersionSeq: Optional[int] = Field(default=None, description="Current version for optimistic checks")
 
-    @root_validator
-    def validate_entity_id(cls, values):
-        if values.get("action") in {"U", "D"} and not values.get("entityId"):
+    @model_validator(mode="after")
+    def validate_entity_id(self):
+        if self.action in {"U", "D"} and not self.entityId:
             raise ValueError("entityId is required for attribute update/delete")
-        return values
+        return self
 
 
 class SubmitRequest(BaseModel):
@@ -46,8 +46,11 @@ class SubmitRequest(BaseModel):
     datasets: List[DatasetSubmitItem] = Field(default_factory=list, description="Dataset-level changes in this submit")
     attributes: List[AttributeSubmitItem] = Field(default_factory=list, description="Attribute-level changes from current page")
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
     def normalize_datasets(cls, values):
+        if not isinstance(values, dict):
+            return values
+
         dataset = values.get("dataset")
         datasets = values.get("datasets")
 
@@ -61,11 +64,11 @@ class SubmitRequest(BaseModel):
 
         return values
 
-    @root_validator
-    def validate_non_empty(cls, values):
-        if not values.get("datasets") and not values.get("attributes"):
+    @model_validator(mode="after")
+    def validate_non_empty(self):
+        if not self.datasets and not self.attributes:
             raise ValueError("At least one dataset or attribute change is required")
-        return values
+        return self
 
 
 class SubmitConflictItem(BaseModel):

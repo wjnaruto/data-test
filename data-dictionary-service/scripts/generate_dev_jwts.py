@@ -112,11 +112,10 @@ py -m http.server 9100
 
 ## Token scenarios
 
-- `requester_tenant_001`
-- `checker_tenant_001`
-- `maker_checker_tenant_001`
-- `requester_tenant_002`
-- `no_groups_user`
+- `custody_unity_requester`
+- `custody_unity_approver`
+- `geneva_requester`
+- `geneva_approver`
 
 All tokens are RS256 JWT access tokens and include the `{GROUPS_CLAIM}` claim.
 """
@@ -132,35 +131,29 @@ def main() -> None:
     JWKS_PATH.write_text(json.dumps({"keys": [jwk]}, indent=2), encoding="utf-8")
 
     scenarios = {
-        "requester_tenant_001": {
+        "custody_unity_requester": {
             "sub": "u10001",
-            "preferred_username": "maker.tenant001",
-            "name": "Maker Tenant001",
-            "groups": ["TENANT_001_REQUESTER"],
+            "preferred_username": "custody.unity.requester",
+            "name": "Custody Unity Requester",
+            "groups": ["Custody_Unity_REQUESTER"],
         },
-        "checker_tenant_001": {
+        "custody_unity_approver": {
             "sub": "u10002",
-            "preferred_username": "checker.tenant001",
-            "name": "Checker Tenant001",
-            "groups": ["TENANT_001_APPROVER"],
+            "preferred_username": "custody.unity.approver",
+            "name": "Custody Unity Approver",
+            "groups": ["Custody_Unity_APPROVER"],
         },
-        "maker_checker_tenant_001": {
+        "geneva_requester": {
             "sub": "u10003",
-            "preferred_username": "dual.tenant001",
-            "name": "Maker Checker Tenant001",
-            "groups": ["TENANT_001_REQUESTER", "TENANT_001_APPROVER"],
+            "preferred_username": "geneva.requester",
+            "name": "GENEVA Requester",
+            "groups": ["GENEVA_REQUESTER"],
         },
-        "requester_tenant_002": {
+        "geneva_approver": {
             "sub": "u10004",
-            "preferred_username": "maker.tenant002",
-            "name": "Maker Tenant002",
-            "groups": ["TENANT_002_REQUESTER"],
-        },
-        "no_groups_user": {
-            "sub": "u10005",
-            "preferred_username": "nogroups.user",
-            "name": "No Groups User",
-            "groups": [],
+            "preferred_username": "geneva.approver",
+            "name": "GENEVA Approver",
+            "groups": ["GENEVA_APPROVER"],
         },
     }
 

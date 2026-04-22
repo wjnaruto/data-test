@@ -1,0 +1,226 @@
+{
+  "description": "Submit API request samples for maker-checker local testing. Each request is dataset-only or attribute-only. Replace domainId, tenantUniqueId, entityId, and tableId values with real IDs from your local database before calling /api/v1/submit.",
+  "auth": {
+    "recommendedTokenKey": "custody_unity_requester",
+    "tokenFile": "dev/auth/tokens.json",
+    "swaggerUsage": "Use the token value directly in Swagger Authorize. Do not manually prefix Bearer."
+  },
+  "scopePlaceholders": {
+    "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+    "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME",
+    "existingDatasetId1": "EXISTING_DATASET_ID_1_REPLACE_ME",
+    "existingDatasetId2": "EXISTING_DATASET_ID_2_REPLACE_ME",
+    "existingAttributeId1": "EXISTING_ATTRIBUTE_ID_1_REPLACE_ME",
+    "existingAttributeId2": "EXISTING_ATTRIBUTE_ID_2_REPLACE_ME"
+  },
+  "datasetOnly": {
+    "addMultipleDatasets": {
+      "sourceType": "UI",
+      "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+      "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME",
+      "makerComment": "Test submit: add multiple datasets only.",
+      "datasets": [
+        {
+          "clientRef": "new-dataset-001",
+          "action": "A",
+          "tableMetadata": {
+            "tableName": "TEST_POSITION_DATASET_A",
+            "Table Name": "TEST_POSITION_DATASET_A",
+            "Table Description": "Local test dataset A created through submit API.",
+            "Product": "Custody",
+            "Data Classification": "Internal",
+            "Country Of Origin": "UK",
+            "Update Frequency": "Daily",
+            "Client View": "Yes",
+            "Business Owner ID": "u10001",
+            "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+            "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
+          }
+        },
+        {
+          "clientRef": "new-dataset-002",
+          "action": "A",
+          "tableMetadata": {
+            "tableName": "TEST_TRANSACTION_DATASET_B",
+            "Table Name": "TEST_TRANSACTION_DATASET_B",
+            "Table Description": "Local test dataset B created through submit API.",
+            "Product": "Custody",
+            "Data Classification": "Internal",
+            "Country Of Origin": "UK",
+            "Update Frequency": "Daily",
+            "Client View": "Yes",
+            "Business Owner ID": "u10001",
+            "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+            "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
+          }
+        }
+      ],
+      "attributes": []
+    },
+    "updateMultipleDatasets": {
+      "sourceType": "UI",
+      "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+      "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME",
+      "makerComment": "Test submit: update multiple datasets only.",
+      "datasets": [
+        {
+          "action": "U",
+          "entityId": "EXISTING_DATASET_ID_1_REPLACE_ME",
+          "currentVersionSeq": 1,
+          "tableMetadata": {
+            "Table Description": "Updated dataset description from submit API test.",
+            "Update Frequency": "Weekly",
+            "Client View": "No",
+            "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+            "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
+          }
+        },
+        {
+          "action": "U",
+          "entityId": "EXISTING_DATASET_ID_2_REPLACE_ME",
+          "currentVersionSeq": 1,
+          "tableMetadata": {
+            "Table Description": "Second updated dataset description from submit API test.",
+            "Update Frequency": "Monthly",
+            "Client View": "Yes",
+            "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+            "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
+          }
+        }
+      ],
+      "attributes": []
+    },
+    "deleteMultipleDatasets": {
+      "sourceType": "UI",
+      "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+      "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME",
+      "makerComment": "Test submit: delete multiple datasets only. On approval, related attributes should be soft deleted by approve flow.",
+      "datasets": [
+        {
+          "action": "D",
+          "entityId": "EXISTING_DATASET_ID_1_REPLACE_ME",
+          "currentVersionSeq": 1,
+          "tableMetadata": {
+            "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+            "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
+          }
+        },
+        {
+          "action": "D",
+          "entityId": "EXISTING_DATASET_ID_2_REPLACE_ME",
+          "currentVersionSeq": 1,
+          "tableMetadata": {
+            "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+            "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
+          }
+        }
+      ],
+      "attributes": []
+    }
+  },
+  "attributeOnly": {
+    "addMultipleAttributesToSameDataset": {
+      "sourceType": "UI",
+      "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+      "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME",
+      "makerComment": "Test submit: add multiple attributes to the same existing dataset.",
+      "datasets": [],
+      "attributes": [
+        {
+          "action": "A",
+          "metadata": {
+            "tableId": "EXISTING_DATASET_ID_1_REPLACE_ME",
+            "Field Name": "test_position_id",
+            "Field Description": "Local test attribute for position id.",
+            "Physical Field Name": "test_position_id",
+            "Data Type": "varchar",
+            "Length": "36",
+            "Is Primary Key": "Y",
+            "Nullable": "N",
+            "Data Classification": "Internal",
+            "Client View": "Yes",
+            "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+            "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
+          }
+        },
+        {
+          "action": "A",
+          "metadata": {
+            "tableId": "EXISTING_DATASET_ID_1_REPLACE_ME",
+            "Field Name": "test_position_amount",
+            "Field Description": "Local test attribute for position amount.",
+            "Physical Field Name": "test_position_amount",
+            "Data Type": "numeric",
+            "Length": "18,2",
+            "Is Primary Key": "N",
+            "Nullable": "Y",
+            "Data Classification": "Internal",
+            "Client View": "Yes",
+            "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+            "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
+          }
+        }
+      ]
+    },
+    "updateMultipleAttributesFromSameDataset": {
+      "sourceType": "UI",
+      "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+      "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME",
+      "makerComment": "Test submit: update multiple attributes from the same dataset.",
+      "datasets": [],
+      "attributes": [
+        {
+          "action": "U",
+          "entityId": "EXISTING_ATTRIBUTE_ID_1_REPLACE_ME",
+          "currentVersionSeq": 1,
+          "metadata": {
+            "Field Description": "Updated field description from submit API test.",
+            "Nullable": "N",
+            "Client View": "No",
+            "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+            "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
+          }
+        },
+        {
+          "action": "U",
+          "entityId": "EXISTING_ATTRIBUTE_ID_2_REPLACE_ME",
+          "currentVersionSeq": 1,
+          "metadata": {
+            "Field Description": "Second updated field description from submit API test.",
+            "Nullable": "Y",
+            "Client View": "Yes",
+            "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+            "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
+          }
+        }
+      ]
+    },
+    "deleteMultipleAttributesFromSameDataset": {
+      "sourceType": "UI",
+      "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+      "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME",
+      "makerComment": "Test submit: delete multiple attributes from the same dataset.",
+      "datasets": [],
+      "attributes": [
+        {
+          "action": "D",
+          "entityId": "EXISTING_ATTRIBUTE_ID_1_REPLACE_ME",
+          "currentVersionSeq": 1,
+          "metadata": {
+            "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+            "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
+          }
+        },
+        {
+          "action": "D",
+          "entityId": "EXISTING_ATTRIBUTE_ID_2_REPLACE_ME",
+          "currentVersionSeq": 1,
+          "metadata": {
+            "domainId": "CUSTODY_DOMAIN_ID_REPLACE_ME",
+            "tenantUniqueId": "CUSTODY_UNITY_TENANT_ENTITY_ID_REPLACE_ME"
+          }
+        }
+      ]
+    }
+  }
+}

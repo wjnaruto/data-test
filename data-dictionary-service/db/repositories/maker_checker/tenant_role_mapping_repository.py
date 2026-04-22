@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional, Sequence
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,3 +25,24 @@ class TenantRoleMappingRepository:
         )
         result = await session.execute(statement)
         return result.scalars().first()
+
+    async def get_active_mappings_for_groups(
+        self,
+        session: AsyncSession,
+        groups: Sequence[str],
+    ) -> List[TenantRoleMapping]:
+        if not groups:
+            return []
+
+        statement = (
+            select(TenantRoleMapping)
+            .where(TenantRoleMapping.ad_group_name.in_(groups))
+            .where(TenantRoleMapping.is_active.is_(True))
+            .order_by(
+                TenantRoleMapping.domain_id,
+                TenantRoleMapping.tenant_unique_id,
+                TenantRoleMapping.role_type,
+            )
+        )
+        result = await session.execute(statement)
+        return list(result.scalars().all())

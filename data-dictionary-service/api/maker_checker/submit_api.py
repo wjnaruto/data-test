@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from schemas.maker_checker.submit import SubmitRequest, SubmitResponse
-from services.access_control import get_authenticated_user
+from services.access_control import UserAccessContext, get_current_access_context
 from services.maker_checker.submit_service import SubmitService
 
 
@@ -21,6 +21,6 @@ service = SubmitService()
 )
 async def submit_changes(
     payload: SubmitRequest,
-    user=Depends(get_authenticated_user),
+    access: UserAccessContext = Depends(get_current_access_context),
 ):
-    return await service.submit(payload, user)
+    return await service.submit(payload, access)
