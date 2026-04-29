@@ -1,0 +1,411 @@
+openapi: 3.0.3
+info:
+  title: Data Dictionary Maker-Checker Review API
+  version: 1.0.0
+  description: OpenAPI spec for approving and rejecting maker-checker pending requests.
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: Maker Checker Review
+    description: Approve and reject pending data dictionary changes.
+
+paths:
+  /review/approve:
+    post:
+      tags:
+        - Maker Checker Review
+      summary: Approve pending dataset or attribute changes
+      description: >
+        Approves selected pending items. The caller can send explicit pending item ids,
+        or select request rows from the dataset or attribute dashboard tab by using
+        request-level selection with itemTypeScope.
+      operationId: approvePendingChanges
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRequest"
+            examples:
+              explicitItems:
+                summary: Approve explicit pending items
+                value:
+                  items:
+                    - itemType: DATASET
+                      pendingId: table-pending-id-001
+                    - itemType: ATTRIBUTE
+                      pendingId: attribute-pending-id-001
+                  checkerComment: Approved after review
+              datasetTabRequests:
+                summary: Approve selected request rows from dataset tab
+                value:
+                  requests:
+                    - requestId: req-001
+                      itemTypeScope: DATASET
+                    - requestId: req-002
+                      itemTypeScope: DATASET
+                  checkerComment: Approved dataset changes
+              attributeTabRequests:
+                summary: Approve selected request rows from attribute tab
+                value:
+                  requests:
+                    - requestId: req-001
+                      itemTypeScope: ATTRIBUTE
+                  checkerComment: Approved attribute changes
+      responses:
+        "200":
+          description: Review operation completed. Check failedItems for item-level failures if partial request-group processing is supported.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /review/reject:
+    post:
+      tags:
+        - Maker Checker Review
+      summary: Reject pending dataset or attribute changes
+      description: >
+        Rejects selected pending items. The caller can send explicit pending item ids,
+        or select request rows from the dataset or attribute dashboard tab by using
+        request-level selection with itemTypeScope.
+      operationId: rejectPendingChanges
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRequest"
+            examples:
+              explicitItems:
+                summary: Reject explicit pending items
+                value:
+                  items:
+                    - itemType: DATASET
+                      pendingId: table-pending-id-001
+                  checkerComment: Rejected due to invalid description
+              datasetTabRequests:
+                summary: Reject selected request rows from dataset tab
+                value:
+                  requests:
+                    - requestId: req-001
+                      itemTypeScope: DATASET
+                  checkerComment: Dataset change rejected
+              attributeTabRequests:
+                summary: Reject selected request rows from attribute tab
+                value:
+                  requests:
+                    - requestId: req-001
+                      itemTypeScope: ATTRIBUTE
+                  checkerComment: Attribute change rejected
+      responses:
+        "200":
+          description: Review operation completed. Check failedItems for item-level failures if partial request-group processing is supported.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ReviewRequest:
+      type: object
+      additionalProperties: false
+      description: >
+        Review request payload. At least one of items or requests must be provided.
+        items is used for explicit pending item selection. requests is used when
+        the user selects request rows from a dashboard tab.
+      properties:
+        items:
+          type: array
+          description: Explicit pending items to approve or reject.
+          items:
+            $ref: "#/components/schemas/ReviewItemSelection"
+          default: []
+        requests:
+          type: array
+          description: Request-level selections from dataset or attribute dashboard tabs.
+          items:
+            $ref: "#/components/schemas/ReviewRequestSelection"
+          default: []
+        checkerComment:
+          type: string
+          nullable: true
+          description: Checker comment. Optional for approve, recommended for reject.
+          example: Approved after review
+
+    ReviewItemSelection:
+      type: object
+      required:
+        - itemType
+        - pendingId
+      additionalProperties: false
+      properties:
+        itemType:
+          $ref: "#/components/schemas/ReviewItemType"
+        pendingId:
+          type: string
+          description: Pending row id from table_entity_pending or attribute_entity_pending.
+          example: table-pending-id-001
+
+    ReviewRequestSelection:
+      type: object
+      required:
+        - requestId
+        - itemTypeScope
+      additionalProperties: false
+      properties:
+        requestId:
+          type: string
+          description: Approval request id selected from dashboard.
+          example: req-001
+        itemTypeScope:
+          $ref: "#/components/schemas/ReviewItemTypeScope"
+
+    ReviewItemType:
+      type: string
+      enum:
+        - DATASET
+        - ATTRIBUTE
+      description: Pending item type.
+
+    ReviewItemTypeScope:
+      type: string
+      enum:
+        - DATASET
+        - ATTRIBUTE
+        - ALL
+      description: >
+        Scope used when reviewing by requestId. DATASET expands only dataset
+        pending rows. ATTRIBUTE expands only attribute pending rows. ALL expands both.
+
+    ReviewResponse:
+      type: object
+      required:
+        - processedRequests
+        - failedItems
+      additionalProperties: false
+      properties:
+        processedRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProcessedRequest"
+        failedItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/FailedReviewItem"
+
+    ProcessedRequest:
+      type: object
+      required:
+        - requestId
+        - requestStatus
+        - approvedItems
+        - rejectedItems
+        - pendingItems
+        - processedItems
+      additionalProperties: false
+      properties:
+        requestId:
+          type: string
+          example: req-001
+        requestStatus:
+          $ref: "#/components/schemas/ApprovalRequestStatus"
+        approvedItems:
+          type: integer
+          minimum: 0
+          example: 2
+        rejectedItems:
+          type: integer
+          minimum: 0
+          example: 0
+        pendingItems:
+          type: integer
+          minimum: 0
+          example: 3
+        processedItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProcessedReviewItem"
+
+    ProcessedReviewItem:
+      type: object
+      required:
+        - itemType
+        - pendingId
+        - status
+      additionalProperties: false
+      properties:
+        itemType:
+          $ref: "#/components/schemas/ReviewItemType"
+        pendingId:
+          type: string
+          example: table-pending-id-001
+        status:
+          $ref: "#/components/schemas/ProcessedItemStatus"
+
+    FailedReviewItem:
+      type: object
+      required:
+        - itemType
+        - pendingId
+        - code
+        - message
+      additionalProperties: false
+      properties:
+        itemType:
+          $ref: "#/components/schemas/ReviewItemType"
+        pendingId:
+          type: string
+          example: attribute-pending-id-001
+        requestId:
+          type: string
+          nullable: true
+          example: req-001
+        code:
+          type: string
+          example: PARENT_DATASET_NOT_APPROVED
+        message:
+          type: string
+          example: Parent dataset has not been approved into the main table.
+
+    ApprovalRequestStatus:
+      type: string
+      enum:
+        - PENDING
+        - IN_REVIEW
+        - APPROVED
+        - REJECTED
+        - COMPLETED_MIXED
+
+    ProcessedItemStatus:
+      type: string
+      enum:
+        - APPROVED
+        - REJECTED
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          example: PARENT_DATASET_NOT_APPROVED
+        message:
+          type: string
+          example: Parent dataset has not been approved into the main table.
+        details:
+          nullable: true
+          description: Optional structured details.
+
+  responses:
+    BadRequest:
+      description: Invalid request body.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            emptySelection:
+              value:
+                code: EMPTY_REVIEW_SELECTION
+                message: At least one item or request selection is required.
+            duplicateSelection:
+              value:
+                code: DUPLICATE_REVIEW_SELECTION
+                message: Duplicate pending item or request selection found.
+
+    Unauthorized:
+      description: Missing, expired, or invalid bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: UNAUTHORIZED
+            message: Missing or invalid bearer token.
+
+    Forbidden:
+      description: The authenticated user is not allowed to review the selected request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            approverRoleRequired:
+              value:
+                code: APPROVER_ROLE_REQUIRED
+                message: Approver role is required for the request tenant.
+            selfReview:
+              value:
+                code: SELF_REVIEW_NOT_ALLOWED
+                message: A requester cannot approve or reject their own request.
+
+    NotFound:
+      description: Pending item, request, or main entity was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: PENDING_ITEM_NOT_FOUND
+            message: Pending item was not found.
+
+    Conflict:
+      description: Review cannot be completed because the current state or dependencies are invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            alreadyReviewed:
+              value:
+                code: PENDING_ITEM_ALREADY_REVIEWED
+                message: Pending item has already been approved or rejected.
+            parentDatasetNotApproved:
+              value:
+                code: PARENT_DATASET_NOT_APPROVED
+                message: Parent dataset has not been approved into the main table.
+            noPendingItems:
+              value:
+                code: NO_PENDING_ITEMS_FOR_SELECTION
+                message: The selected request has no pending items for the selected scope.
+            datasetDeleteConflict:
+              value:
+                code: DATASET_DELETE_HAS_PENDING_ATTRIBUTES
+                message: Dataset delete cannot be approved while child attribute pending items remain unresolved.
