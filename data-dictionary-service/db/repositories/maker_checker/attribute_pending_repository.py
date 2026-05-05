@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterable, Optional
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -79,3 +79,74 @@ class AttributePendingRepository:
         )
 
         await session.execute(statement)
+
+    async def get_by_ids_for_update(self, session: AsyncSession, pending_ids: Iterable[str]):
+        ids = list(pending_ids)
+        if not ids:
+            return []
+        statement = (
+            sa.select(AttributeEntityPending.__table__)
+            .where(AttributeEntityPending.__table__.c.pending_id.in_(ids))
+            .with_for_update()
+        )
+        result = await session.execute(statement)
+        return result.mappings().all()
+
+    async def get_pending_by_request_for_update(self, session: AsyncSession, request_id: str):
+        statement = (
+            sa.select(AttributeEntityPending.__table__)
+            .where(AttributeEntityPending.__table__.c.request_id == request_id)
+            .where(AttributeEntityPending.__table__.c.approval_status == "P")
+            .with_for_update()
+        )
+        result = await session.execute(statement)
+        return result.mappings().all()
+
+    async def find_pending_by_table_ids(self, session: AsyncSession, table_ids: Iterable[str]):
+        ids = list({table_id for table_id in table_ids if table_id})
+        if not ids:
+            return []
+        statement = (
+            sa.select(AttributeEntityPending.__table__)
+            .where(AttributeEntityPending.__table__.c.table_id.in_(ids))
+            .where(AttributeEntityPending.__table__.c.approval_status == "P")
+        )
+        result = await session.execute(statement)
+        return result.mappings().all()
+
+    async def mark_reviewed(
+        self,
+        session: AsyncSession,
+        pending_ids: Iterable[str],
+        approval_status: str,
+        approver_id: str,
+        approver_ts,
+        checker_comment: Optional[str],
+    ) -> None:
+        ids = list(pending_ids)
+        if not ids:
+            return
+        statement = (
+            sa.update(AttributeEntityPending.__table__)
+            .where(AttributeEntityPending.__table__.c.pending_id.in_(ids))
+            .values(
+                approval_status=approval_status,
+                approver_id=approver_id,
+                approver_ts=approver_ts,
+                checker_comment=checker_comment,
+                updated_at=approver_ts,
+            )
+        )
+        await session.execute(statement)
+
+    async def count_status_by_request(self, session: AsyncSession, request_id: str):
+        statement = (
+            sa.select(
+                AttributeEntityPending.__table__.c.approval_status,
+                sa.func.count().label("item_count"),
+            )
+            .where(AttributeEntityPending.__table__.c.request_id == request_id)
+            .group_by(AttributeEntityPending.__table__.c.approval_status)
+        )
+        result = await session.execute(statement)
+        return result.mappings().all()

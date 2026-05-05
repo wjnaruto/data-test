@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models.maker_checker import ApprovalRequest
@@ -37,3 +38,41 @@ class ApprovalRequestRepository:
         session.add(request_row)
         await session.flush()
         return request_row
+
+    async def get_by_id_for_update(self, session: AsyncSession, request_id: str):
+        statement = (
+            sa.select(ApprovalRequest.__table__)
+            .where(ApprovalRequest.__table__.c.request_id == request_id)
+            .with_for_update()
+            .limit(1)
+        )
+        result = await session.execute(statement)
+        return result.mappings().first()
+
+    async def update_review_summary(
+        self,
+        session: AsyncSession,
+        request_id: str,
+        request_status: str,
+        approved_items: int,
+        rejected_items: int,
+        reviewed_by: str,
+        reviewed_by_name: Optional[str],
+        reviewed_at,
+        checker_comment: Optional[str],
+    ) -> None:
+        statement = (
+            sa.update(ApprovalRequest.__table__)
+            .where(ApprovalRequest.__table__.c.request_id == request_id)
+            .values(
+                request_status=request_status,
+                approved_items=approved_items,
+                rejected_items=rejected_items,
+                reviewed_by=reviewed_by,
+                reviewed_by_name=reviewed_by_name,
+                reviewed_at=reviewed_at,
+                checker_comment=checker_comment,
+                updated_at=reviewed_at,
+            )
+        )
+        await session.execute(statement)

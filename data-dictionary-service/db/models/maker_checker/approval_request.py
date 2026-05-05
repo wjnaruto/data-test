@@ -8,7 +8,7 @@ class ApprovalRequest(SQLModel, table=True):
     __table_args__ = (
         sa.CheckConstraint("source_type IN ('UPLOAD', 'UI')", name="approval_request_source_type_chk"),
         sa.CheckConstraint(
-            "request_status IN ('PENDING', 'APPROVED', 'REJECTED', 'PARTIALLY_APPROVED')",
+            "request_status IN ('PENDING', 'IN_REVIEW', 'APPROVED', 'REJECTED', 'COMPLETED_MIXED')",
             name="approval_request_status_chk",
         ),
         sa.Index(
@@ -53,4 +53,3 @@ class ApprovalRequest(SQLModel, table=True):
         default=None,
         sa_column=sa.Column(sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
-

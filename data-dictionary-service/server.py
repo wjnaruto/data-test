@@ -10,6 +10,7 @@ from api.common_api import router as CommonRouter
 from api.glossary_api import router as GlossaryRouter
 from api.maker_checker.auth_api import router as AuthRouter
 from api.maker_checker.submit_api import router as SubmitRouter
+from api.maker_checker.review_api import router as ReviewRouter
 from db.session import db
 import uvicorn
 from core.config import get_logger, settings
@@ -83,6 +84,7 @@ routers = [
     (CommonRouter, "/api/v1"),
     (AuthRouter, "/api/v1"),
     (SubmitRouter, "/api/v1"),
+    (ReviewRouter, "/api/v1"),
     (graphql_app, "/graphql"),
     (GlossaryRouter, "/api/v1")
 ]

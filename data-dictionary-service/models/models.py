@@ -3,6 +3,10 @@ from typing import Optional, Dict, List, Any
 from pydantic import BaseModel, Field
 
 
+def _string_or_empty(value):
+    return "" if value is None else str(value)
+
+
 class DomainVO(BaseModel):
     id: str = Field("", description="The unique identifier of the domain")
     name: str = Field("", description="The name of the domain")
@@ -139,15 +143,15 @@ class TableVO(BaseModel):
             deleted=metadata.get("deleted", None),
             createdAt=metadata.get("createdAt", ""),
             attributes=metadata.get("attributes", []),
-            requesterId=metadata.get("requesterId", metadata.get("requester_id", "")),
-            approverId=metadata.get("approverId", metadata.get("approver_id", "")),
+            requesterId=_string_or_empty(metadata.get("requesterId", metadata.get("requester_id", ""))),
+            approverId=_string_or_empty(metadata.get("approverId", metadata.get("approver_id", ""))),
             requesterTs=metadata.get("requesterTs", metadata.get("requester_ts", None)),
             approverTs=metadata.get("approverTs", metadata.get("approver_ts", None)),
             versionSeq=metadata.get("versionSeq", metadata.get("version_seq", None)),
-            versionLabel=metadata.get("versionLabel", metadata.get("version_label", "")),
-            dictionaryAction=metadata.get("dictionaryAction", metadata.get("dictionary_action", "")),
-            approvalStatus=metadata.get("approvalStatus", metadata.get("approval_status", "")),
-            recordStatus=metadata.get("recordStatus", metadata.get("record_status", "")),
+            versionLabel=_string_or_empty(metadata.get("versionLabel", metadata.get("version_label", ""))),
+            dictionaryAction=_string_or_empty(metadata.get("dictionaryAction", metadata.get("dictionary_action", ""))),
+            approvalStatus=_string_or_empty(metadata.get("approvalStatus", metadata.get("approval_status", ""))),
+            recordStatus=_string_or_empty(metadata.get("recordStatus", metadata.get("record_status", ""))),
         )
 
 
@@ -203,10 +207,14 @@ class AttributeVO(BaseModel):
     @classmethod
     def from_record(cls, metadata):
         return cls(
-            **metadata,
+            id=metadata.get("id", ""),
             fieldName=metadata.get("Field Name", ""),
+            domainId=metadata.get("domainId", ""),
             domainName=metadata.get("Domain Name", metadata.get("Product", "")),
+            tenantUniqueId=metadata.get("tenantUniqueId", ""),
+            tenantId=metadata.get("tenantId", ""),
             tenantName=metadata.get("tenantName", metadata.get("Tenant Name", "")),
+            tableId=metadata.get("tableId", ""),
             tableName=metadata.get("Table Name", ""),
             physicalTableName=metadata.get("Physical Table Name", ""),
             physicalFieldName=metadata.get("Physical Field Name", ""),
@@ -230,15 +238,15 @@ class AttributeVO(BaseModel):
             createdAt=metadata.get("createdAt", None),
             updatedAt=metadata.get("updatedAt", None),
             updatedBy=metadata.get("updatedBy", ""),
-            requesterId=metadata.get("requesterId", metadata.get("requester_id", "")),
-            approverId=metadata.get("approverId", metadata.get("approver_id", "")),
+            requesterId=_string_or_empty(metadata.get("requesterId", metadata.get("requester_id", ""))),
+            approverId=_string_or_empty(metadata.get("approverId", metadata.get("approver_id", ""))),
             requesterTs=metadata.get("requesterTs", metadata.get("requester_ts", None)),
             approverTs=metadata.get("approverTs", metadata.get("approver_ts", None)),
             versionSeq=metadata.get("versionSeq", metadata.get("version_seq", None)),
-            versionLabel=metadata.get("versionLabel", metadata.get("version_label", "")),
-            dictionaryAction=metadata.get("dictionaryAction", metadata.get("dictionary_action", "")),
-            approvalStatus=metadata.get("approvalStatus", metadata.get("approval_status", "")),
-            recordStatus=metadata.get("recordStatus", metadata.get("record_status", "")),
+            versionLabel=_string_or_empty(metadata.get("versionLabel", metadata.get("version_label", ""))),
+            dictionaryAction=_string_or_empty(metadata.get("dictionaryAction", metadata.get("dictionary_action", ""))),
+            approvalStatus=_string_or_empty(metadata.get("approvalStatus", metadata.get("approval_status", ""))),
+            recordStatus=_string_or_empty(metadata.get("recordStatus", metadata.get("record_status", ""))),
         )
 
 
