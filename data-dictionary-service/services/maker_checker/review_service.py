@@ -14,6 +14,7 @@ from db.repositories.maker_checker import (
     ApprovalRequestRepository,
     AttributeEntityRepository,
     AttributePendingRepository,
+    ReferenceDataRepository,
     TableEntityRepository,
     TablePendingRepository,
 )
@@ -46,6 +47,7 @@ class ReviewService:
         self.attribute_pending_repository = AttributePendingRepository()
         self.table_entity_repository = TableEntityRepository()
         self.attribute_entity_repository = AttributeEntityRepository()
+        self.reference_data_repository = ReferenceDataRepository()
 
     async def approve(self, payload: ReviewRequest, user: UserAccessContext) -> ReviewResponse:
         return await self._review(payload=payload, user=user, action="APPROVE")
@@ -321,6 +323,7 @@ class ReviewService:
 
     async def _approve_table_add(self, session, row, user: UserAccessContext, approver_ts) -> str:
         metadata = self._with_publish_controls(self._coerce_json(row["table_metadata"]), user.user_id, approver_ts, deleted=False)
+        metadata = await self._enrich_dataset_metadata(session, metadata)
         table_id = metadata.get("id")
         if not table_id:
             raise HTTPException(status_code=409, detail={"code": "MISSING_PROPOSED_TABLE_ID", "message": "Dataset add pending row has no proposed table id."})
@@ -352,6 +355,7 @@ class ReviewService:
         )
         merged = self._merge_metadata(current["table_metadata"], row["table_metadata"])
         merged = self._with_publish_controls(merged, user.user_id, approver_ts, deleted=False)
+        merged = await self._enrich_dataset_metadata(session, merged)
         await self.table_entity_repository.update_current(
             session=session,
             table_id=row["target_table_id"],
@@ -423,6 +427,7 @@ class ReviewService:
             )
 
         deleted_table_metadata = self._with_publish_controls(current["table_metadata"], user.user_id, approver_ts, deleted=True)
+        deleted_table_metadata = await self._enrich_dataset_metadata(session, deleted_table_metadata)
         await self.table_entity_repository.soft_delete_current(
             session=session,
             table_id=row["target_table_id"],
@@ -455,6 +460,7 @@ class ReviewService:
                 },
             )
 
+        metadata = await self._enrich_attribute_metadata(session, metadata, parent)
         await self.attribute_entity_repository.insert_current(
             session=session,
             metadata_json=metadata,
@@ -481,6 +487,8 @@ class ReviewService:
         )
         merged = self._merge_metadata(current["metadata"], row["metadata"])
         merged = self._with_publish_controls(merged, user.user_id, approver_ts, deleted=False)
+        parent = await self.table_entity_repository.get_by_id(session, merged.get("tableId") or current["table_id"])
+        merged = await self._enrich_attribute_metadata(session, merged, parent)
         await self.attribute_entity_repository.update_current(
             session=session,
             attribute_id=row["target_attribute_id"],
@@ -507,6 +515,8 @@ class ReviewService:
             source_request_id=row["request_id"],
         )
         metadata = self._with_publish_controls(current["metadata"], user.user_id, approver_ts, deleted=True)
+        parent = await self.table_entity_repository.get_by_id(session, metadata.get("tableId") or current["table_id"])
+        metadata = await self._enrich_attribute_metadata(session, metadata, parent)
         await self.attribute_entity_repository.soft_delete_current(
             session=session,
             attribute_id=row["target_attribute_id"],
@@ -565,6 +575,72 @@ class ReviewService:
         merged = self._coerce_json(current_metadata)
         merged.update(self._coerce_json(pending_metadata))
         return merged
+
+    async def _enrich_dataset_metadata(self, session, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        result = dict(metadata)
+        domain_id = result.get("domainId")
+        tenant_unique_id = result.get("tenantUniqueId")
+
+        if not domain_id:
+            raise HTTPException(status_code=409, detail={"code": "DATASET_DOMAIN_ID_REQUIRED", "message": "Dataset metadata has no domainId."})
+        if not tenant_unique_id:
+            raise HTTPException(status_code=409, detail={"code": "DATASET_TENANT_ID_REQUIRED", "message": "Dataset metadata has no tenantUniqueId."})
+
+        domain = await self.reference_data_repository.get_domain_by_id(session, domain_id)
+        tenant = await self.reference_data_repository.get_tenant_by_id(session, tenant_unique_id)
+        if domain is None:
+            raise HTTPException(status_code=404, detail={"code": "DOMAIN_NOT_FOUND", "message": f"Domain {domain_id} was not found."})
+        if tenant is None:
+            raise HTTPException(status_code=404, detail={"code": "TENANT_NOT_FOUND", "message": f"Tenant {tenant_unique_id} was not found."})
+
+        tenant_metadata = self._coerce_json(tenant["metadata"])
+        tenant_name = result.get("tenantName") or tenant["name"] or tenant_metadata.get("tenant_name") or tenant_metadata.get("Tenant Name")
+        domain_metadata = self._coerce_json(domain["metadata"])
+        domain_name = result.get("domainName") or result.get("Domain Name") or domain["name"] or domain_metadata.get("name")
+
+        if not tenant_name:
+            raise HTTPException(status_code=409, detail={"code": "TENANT_NAME_REQUIRED", "message": "Tenant name cannot be resolved for dataset metadata."})
+        if not result.get("tableName"):
+            raise HTTPException(status_code=409, detail={"code": "TABLE_NAME_REQUIRED", "message": "Dataset metadata has no tableName."})
+
+        result["tenantName"] = tenant_name
+        result.setdefault("Tenant Name", tenant_name)
+        result["domainId"] = domain_id
+        result["tenantUniqueId"] = tenant_unique_id
+        if domain_name:
+            result["domainName"] = domain_name
+            result["Domain Name"] = domain_name
+        result.setdefault("Table Name", result.get("tableName"))
+        return result
+
+    async def _enrich_attribute_metadata(self, session, metadata: Dict[str, Any], parent_table) -> Dict[str, Any]:
+        result = dict(metadata)
+        table_id = result.get("tableId")
+        if not table_id:
+            raise HTTPException(status_code=409, detail={"code": "ATTRIBUTE_TABLE_ID_REQUIRED", "message": "Attribute metadata has no tableId."})
+
+        if parent_table is None:
+            parent_table = await self.table_entity_repository.get_by_id(session, table_id)
+        if parent_table is None:
+            raise HTTPException(status_code=409, detail={"code": "PARENT_DATASET_NOT_APPROVED", "message": "Parent dataset has not been approved into the main table."})
+
+        parent_metadata = self._coerce_json(parent_table["table_metadata"])
+        result["tableId"] = table_id
+        result["domainId"] = result.get("domainId") or parent_metadata.get("domainId")
+        result["tenantUniqueId"] = result.get("tenantUniqueId") or parent_metadata.get("tenantUniqueId")
+        result["tenantName"] = result.get("tenantName") or parent_metadata.get("tenantName")
+        result.setdefault("Tenant Name", result.get("tenantName"))
+        result.setdefault("Table Name", parent_metadata.get("Table Name") or parent_metadata.get("tableName"))
+        result.setdefault("Physical Table Name", parent_metadata.get("Physical Table Name"))
+
+        if not result.get("tenantName"):
+            raise HTTPException(status_code=409, detail={"code": "TENANT_NAME_REQUIRED", "message": "Tenant name cannot be resolved for attribute metadata."})
+        if not result.get("Table Name"):
+            raise HTTPException(status_code=409, detail={"code": "ATTRIBUTE_TABLE_NAME_REQUIRED", "message": "Attribute metadata has no Table Name."})
+        if not result.get("Field Name"):
+            raise HTTPException(status_code=409, detail={"code": "FIELD_NAME_REQUIRED", "message": "Attribute metadata has no Field Name."})
+
+        return result
 
     def _with_publish_controls(self, metadata: Any, user_id: str, approver_ts, deleted: bool) -> Dict[str, Any]:
         result = self._coerce_json(metadata)
