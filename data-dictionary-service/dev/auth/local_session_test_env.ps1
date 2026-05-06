@@ -1,0 +1,8 @@
+$env:ENV = "local"
+$env:AUTH_ENABLE_MOCK_LOGIN = "true"
+$env:AUTH_MOCK_USERS_FILE = "dev/auth/mock_users.json"
+$env:SESSION_COOKIE_NAME = "dds_session"
+$env:SESSION_COOKIE_SECURE = "false"
+$env:SESSION_COOKIE_SAMESITE = "lax"
+$env:SESSION_TTL_SECONDS = "28800"
+$env:CORS_ALLOW_ORIGINS = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"

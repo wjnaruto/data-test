@@ -44,6 +44,10 @@ if "AUTH_USER_NAME_CLAIM" in os.environ:
     env_settings["auth_user_name_claim"] = os.environ.get("AUTH_USER_NAME_CLAIM")
 if "AUTH_LOGIN_URL" in os.environ:
     env_settings["auth_login_url"] = os.environ.get("AUTH_LOGIN_URL")
+if "AUTH_ENABLE_MOCK_LOGIN" in os.environ:
+    env_settings["auth_enable_mock_login"] = os.environ.get("AUTH_ENABLE_MOCK_LOGIN")
+if "AUTH_MOCK_USERS_FILE" in os.environ:
+    env_settings["auth_mock_users_file"] = os.environ.get("AUTH_MOCK_USERS_FILE")
 if "SESSION_COOKIE_NAME" in os.environ:
     env_settings["session_cookie_name"] = os.environ.get("SESSION_COOKIE_NAME")
 if "SESSION_TTL_SECONDS" in os.environ:
@@ -77,6 +81,8 @@ class Settings(BaseSettings):
     auth_user_id_claim: str = env_settings.get("auth_user_id_claim", "sub")
     auth_user_name_claim: str = env_settings.get("auth_user_name_claim", "preferred_username")
     auth_login_url: str = env_settings.get("auth_login_url", "")
+    auth_enable_mock_login: bool = str(env_settings.get("auth_enable_mock_login", "false")).lower() == "true"
+    auth_mock_users_file: str = env_settings.get("auth_mock_users_file", "dev/auth/mock_users.json")
     session_cookie_name: str = env_settings.get("session_cookie_name", "dds_session")
     session_ttl_seconds: int = int(env_settings.get("session_ttl_seconds", 28800))
     session_cookie_secure: bool = str(env_settings.get("session_cookie_secure", "false" if is_local_env else "true")).lower() == "true"

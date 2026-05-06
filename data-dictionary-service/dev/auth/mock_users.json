@@ -1,0 +1,32 @@
+{
+  "users": [
+    {
+      "username": "requester_user",
+      "password": "requester123",
+      "displayName": "Local Requester User",
+      "email": "requester_user@example.com",
+      "authorities": [
+        "Custody_Unity_REQUESTER"
+      ]
+    },
+    {
+      "username": "approver_user",
+      "password": "approver123",
+      "displayName": "Local Approver User",
+      "email": "approver_user@example.com",
+      "authorities": [
+        "Custody_Unity_APPROVER"
+      ]
+    },
+    {
+      "username": "maker_checker_user",
+      "password": "makerchecker123",
+      "displayName": "Local Maker Checker User",
+      "email": "maker_checker_user@example.com",
+      "authorities": [
+        "Custody_Unity_REQUESTER",
+        "Custody_Unity_APPROVER"
+      ]
+    }
+  ]
+}

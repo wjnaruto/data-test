@@ -6,6 +6,7 @@ import json
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -68,6 +69,9 @@ class AuthSessionService:
         clear_session_cookie(response)
 
     async def _authenticate_with_oauth_server(self, username: str, password: str) -> OAuthUserInfo:
+        if settings.auth_enable_mock_login:
+            return _authenticate_with_mock_users(username, password)
+
         if not settings.auth_login_url:
             raise HTTPException(status_code=500, detail="Auth login URL is not configured.")
 
@@ -109,6 +113,32 @@ def _post_json(url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     if not response_body:
         return {}
     return json.loads(response_body)
+
+
+def _authenticate_with_mock_users(username: str, password: str) -> OAuthUserInfo:
+    mock_users_path = Path(settings.auth_mock_users_file)
+    if not mock_users_path.is_absolute():
+        mock_users_path = Path.cwd() / mock_users_path
+
+    if not mock_users_path.exists():
+        raise HTTPException(status_code=500, detail=f"Mock users file not found: {mock_users_path}")
+
+    try:
+        payload = json.loads(mock_users_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail=f"Mock users file is not valid JSON: {mock_users_path}")
+
+    users = payload.get("users", [])
+    for user in users:
+        if user.get("username") == username and user.get("password") == password:
+            return OAuthUserInfo(
+                username=str(user["username"]),
+                display_name=user.get("displayName"),
+                email=user.get("email"),
+                authorities=_extract_authorities(user),
+            )
+
+    raise HTTPException(status_code=401, detail="Invalid username or password.")
 
 
 def _extract_authorities(data: Dict[str, Any]) -> List[str]:
