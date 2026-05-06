@@ -94,9 +94,19 @@ for routers, prefix in routers:
     app.include_router(routers, prefix=prefix)
 
 
+cors_allow_origins = [origin.strip() for origin in settings.cors_allow_origins.split(",") if origin.strip()]
+if not cors_allow_origins:
+    cors_allow_origins = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

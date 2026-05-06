@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings
 
 
 env_settings = dict()
+is_local_env = os.environ.get("ENV") == "local"
 
 if "INSTANCE_CONNECTION_NAME" in os.environ:
     env_settings["instance_connection_name"] = os.environ.get("INSTANCE_CONNECTION_NAME")
@@ -41,6 +42,20 @@ if "AUTH_USER_ID_CLAIM" in os.environ:
     env_settings["auth_user_id_claim"] = os.environ.get("AUTH_USER_ID_CLAIM")
 if "AUTH_USER_NAME_CLAIM" in os.environ:
     env_settings["auth_user_name_claim"] = os.environ.get("AUTH_USER_NAME_CLAIM")
+if "AUTH_LOGIN_URL" in os.environ:
+    env_settings["auth_login_url"] = os.environ.get("AUTH_LOGIN_URL")
+if "SESSION_COOKIE_NAME" in os.environ:
+    env_settings["session_cookie_name"] = os.environ.get("SESSION_COOKIE_NAME")
+if "SESSION_TTL_SECONDS" in os.environ:
+    env_settings["session_ttl_seconds"] = os.environ.get("SESSION_TTL_SECONDS")
+if "SESSION_COOKIE_SECURE" in os.environ:
+    env_settings["session_cookie_secure"] = os.environ.get("SESSION_COOKIE_SECURE")
+if "SESSION_COOKIE_SAMESITE" in os.environ:
+    env_settings["session_cookie_samesite"] = os.environ.get("SESSION_COOKIE_SAMESITE")
+if "SESSION_COOKIE_DOMAIN" in os.environ:
+    env_settings["session_cookie_domain"] = os.environ.get("SESSION_COOKIE_DOMAIN")
+if "CORS_ALLOW_ORIGINS" in os.environ:
+    env_settings["cors_allow_origins"] = os.environ.get("CORS_ALLOW_ORIGINS")
 
 
 class Settings(BaseSettings):
@@ -61,6 +76,13 @@ class Settings(BaseSettings):
     auth_groups_claim: str = env_settings.get("auth_groups_claim", "groups")
     auth_user_id_claim: str = env_settings.get("auth_user_id_claim", "sub")
     auth_user_name_claim: str = env_settings.get("auth_user_name_claim", "preferred_username")
+    auth_login_url: str = env_settings.get("auth_login_url", "")
+    session_cookie_name: str = env_settings.get("session_cookie_name", "dds_session")
+    session_ttl_seconds: int = int(env_settings.get("session_ttl_seconds", 28800))
+    session_cookie_secure: bool = str(env_settings.get("session_cookie_secure", "false" if is_local_env else "true")).lower() == "true"
+    session_cookie_samesite: str = env_settings.get("session_cookie_samesite", "lax" if is_local_env else "none")
+    session_cookie_domain: str = env_settings.get("session_cookie_domain", "")
+    cors_allow_origins: str = env_settings.get("cors_allow_origins", "")
 
 
 settings = Settings()

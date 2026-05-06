@@ -16,7 +16,7 @@ service = SubmitService()
     summary="Submit dataset and attribute changes for approval",
     description=(
         "Stage dataset and attribute add/update/delete changes into maker-checker pending tables. "
-        "This endpoint requires OAuth2 Bearer token validation and requester role validation for the target tenant."
+        "This endpoint requires an active Data Dictionary session cookie and requester role validation for the target tenant."
     ),
 )
 async def submit_changes(

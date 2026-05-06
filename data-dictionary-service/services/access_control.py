@@ -1,29 +1,28 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
-from urllib.error import URLError
+from datetime import datetime, timezone
+from typing import List, Optional
 
-from fastapi import HTTPException, Security
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-import jwt
-from jwt import PyJWKClient
-from jwt.exceptions import InvalidTokenError
+from fastapi import Cookie, Depends, HTTPException
 
 from core.config import settings
-from db.session import db
+from db.repositories.auth import UserSessionRepository
 from db.repositories.maker_checker import TenantRoleMappingRepository
+from db.session import db
+from services.auth_session_service import hash_session_id
 
 
-_jwk_client: Optional[PyJWKClient] = None
 _tenant_role_mapping_repository = TenantRoleMappingRepository()
-bearer_scheme = HTTPBearer(auto_error=False)
+_user_session_repository = UserSessionRepository()
 
 
 @dataclass
 class AuthenticatedUser:
     user_id: str
     user_name: str
+    display_name: Optional[str]
+    email: Optional[str]
     groups: List[str]
 
 
@@ -39,6 +38,8 @@ class TenantRole:
 class UserAccessContext:
     user_id: str
     user_name: str
+    display_name: Optional[str]
+    email: Optional[str]
     groups: List[str]
     roles: List[TenantRole]
 
@@ -65,37 +66,61 @@ class UserAccessContext:
 
 
 async def get_authenticated_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Security(bearer_scheme),
+    session_id: Optional[str] = Cookie(default=None, alias=settings.session_cookie_name),
 ) -> AuthenticatedUser:
-    if credentials is None or credentials.scheme.lower() != "bearer" or not credentials.credentials:
-        raise HTTPException(
-            status_code=401,
-            detail="Bearer access token is required.",
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Active session cookie is required.")
+
+    user = await get_optional_authenticated_user(session_id)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Session is invalid or expired.")
+    return user
+
+
+async def get_optional_authenticated_user(
+    session_id: Optional[str] = Cookie(default=None, alias=settings.session_cookie_name),
+) -> Optional[AuthenticatedUser]:
+    if not session_id:
+        return None
+    if db.engine is None:
+        raise HTTPException(status_code=500, detail="Database engine is not initialized.")
+
+    now = datetime.now(timezone.utc)
+    async with db.session() as session:
+        user_session = await _user_session_repository.get_active(
+            session=session,
+            session_id_hash=hash_session_id(session_id),
+            now=now,
         )
-
-    claims = await _resolve_token_claims(credentials.credentials)
-    user_id = claims.get(settings.auth_user_id_claim) or claims.get("sub")
-    user_name = (
-        claims.get(settings.auth_user_name_claim)
-        or claims.get("preferred_username")
-        or claims.get("name")
-        or user_id
-    )
-    groups = _extract_groups(claims)
-
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Authenticated token does not contain user id claim.")
+        if user_session is None:
+            return None
+        await _user_session_repository.touch(session, user_session.session_id_hash, now)
+        await session.commit()
 
     return AuthenticatedUser(
-        user_id=str(user_id),
-        user_name=str(user_name or user_id),
-        groups=groups,
+        user_id=user_session.username,
+        user_name=user_session.display_name or user_session.username,
+        display_name=user_session.display_name,
+        email=user_session.email,
+        groups=_extract_groups(user_session.authorities),
     )
 
 
 async def get_current_access_context(
-    user: AuthenticatedUser = Security(get_authenticated_user),
+    user: AuthenticatedUser = Depends(get_authenticated_user),
 ) -> UserAccessContext:
+    return await build_access_context(user)
+
+
+async def get_optional_access_context(
+    user: Optional[AuthenticatedUser] = Depends(get_optional_authenticated_user),
+) -> Optional[UserAccessContext]:
+    if user is None:
+        return None
+    return await build_access_context(user)
+
+
+async def build_access_context(user: AuthenticatedUser) -> UserAccessContext:
     if db.engine is None:
         raise HTTPException(status_code=500, detail="Database engine is not initialized.")
 
@@ -108,6 +133,8 @@ async def get_current_access_context(
     return UserAccessContext(
         user_id=user.user_id,
         user_name=user.user_name,
+        display_name=user.display_name,
+        email=user.email,
         groups=user.groups,
         roles=[
             TenantRole(
@@ -121,53 +148,11 @@ async def get_current_access_context(
     )
 
 
-async def _resolve_token_claims(token: str) -> Dict[str, Any]:
-    if not settings.auth_jwks_url:
-        raise HTTPException(
-            status_code=500,
-            detail="Auth server integration is not configured. Set AUTH_JWKS_URL for JWT validation.",
-        )
-    if not settings.auth_issuer:
-        raise HTTPException(
-            status_code=500,
-            detail="Auth server integration is not configured. Set AUTH_ISSUER for JWT validation.",
-        )
-    return _decode_jwt_locally(token)
-
-
-def _decode_jwt_locally(token: str) -> Dict[str, Any]:
-    try:
-        signing_key = _get_jwk_client().get_signing_key_from_jwt(token)
-        algorithms = [item.strip() for item in settings.auth_jwt_algorithms.split(",") if item.strip()]
-        options = {"verify_aud": bool(settings.auth_audience)}
-        return jwt.decode(
-            token,
-            signing_key.key,
-            algorithms=algorithms or ["RS256"],
-            audience=settings.auth_audience or None,
-            issuer=settings.auth_issuer or None,
-            options=options,
-        )
-    except InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Access token is invalid or expired.")
-    except URLError:
-        raise HTTPException(status_code=502, detail="Failed to reach auth server JWKS endpoint.")
-
-
-def _get_jwk_client() -> PyJWKClient:
-    global _jwk_client
-    if _jwk_client is None:
-        _jwk_client = PyJWKClient(settings.auth_jwks_url)
-    return _jwk_client
-
-
-def _extract_groups(claims: Dict[str, Any]) -> List[str]:
-    value = claims.get(settings.auth_groups_claim)
-
-    if value is None:
+def _extract_groups(authorities: object) -> List[str]:
+    if authorities is None:
         return []
-    if isinstance(value, list):
-        return [str(item).strip() for item in value if str(item).strip()]
-    if isinstance(value, str):
-        return [item.strip() for item in value.split(",") if item.strip()]
+    if isinstance(authorities, list):
+        return [str(item).strip() for item in authorities if str(item).strip()]
+    if isinstance(authorities, str):
+        return [item.strip() for item in authorities.split(",") if item.strip()]
     return []

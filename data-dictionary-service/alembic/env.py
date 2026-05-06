@@ -14,6 +14,7 @@ try:
     from core.config import settings
     from db.models.maker_checker import ALEMBIC_TRACKED_TABLES
     from db.models import maker_checker  # noqa: F401
+    from db.models import auth  # noqa: F401
 except ModuleNotFoundError as exc:
     raise RuntimeError(
         "Alembic migration dependencies are missing. "

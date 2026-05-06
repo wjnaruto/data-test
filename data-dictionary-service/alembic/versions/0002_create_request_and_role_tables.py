@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision = "mc0002_req_role"
@@ -17,6 +18,19 @@ depends_on = None
 
 
 def upgrade() -> None:
+    op.create_table(
+        "user_session",
+        sa.Column("session_id_hash", sa.String(length=128), nullable=False),
+        sa.Column("username", sa.String(length=256), nullable=False),
+        sa.Column("display_name", sa.String(length=256), nullable=True),
+        sa.Column("email", sa.String(length=512), nullable=True),
+        sa.Column("authorities", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default=sa.text("'[]'::jsonb")),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("expires_at", sa.TIMESTAMP(timezone=True), nullable=False),
+        sa.Column("last_seen_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("revoked_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.PrimaryKeyConstraint("session_id_hash", name="user_session_pkey"),
+    )
     op.create_table(
         "approval_request",
         sa.Column("request_id", sa.String(length=36), nullable=False),
@@ -41,7 +55,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.CheckConstraint("source_type IN ('UPLOAD', 'UI')", name="approval_request_source_type_chk"),
         sa.CheckConstraint(
-            "request_status IN ('PENDING', 'APPROVED', 'REJECTED', 'PARTIALLY_APPROVED')",
+            "request_status IN ('PENDING', 'IN_REVIEW', 'APPROVED', 'REJECTED', 'COMPLETED_MIXED')",
             name="approval_request_status_chk",
         ),
         sa.ForeignKeyConstraint(["domain_id"], ["domain_entity.id"], name="approval_request_domain_fk"),
@@ -68,12 +82,17 @@ def upgrade() -> None:
     op.create_index("approval_request_submitter_submitted_idx", "approval_request", ["submitted_by", "submitted_at"], unique=False)
     op.create_index("approval_request_source_file_hash_idx", "approval_request", ["source_file_hash"], unique=False)
     op.create_index("tenant_role_mapping_active_idx", "tenant_role_mapping", ["tenant_unique_id", "role_type", "is_active"], unique=False)
+    op.create_index("user_session_username_idx", "user_session", ["username"], unique=False)
+    op.create_index("user_session_expires_at_idx", "user_session", ["expires_at"], unique=False)
 
 
 def downgrade() -> None:
+    op.drop_index("user_session_expires_at_idx", table_name="user_session")
+    op.drop_index("user_session_username_idx", table_name="user_session")
     op.drop_index("tenant_role_mapping_active_idx", table_name="tenant_role_mapping")
     op.drop_table("tenant_role_mapping")
     op.drop_index("approval_request_source_file_hash_idx", table_name="approval_request")
     op.drop_index("approval_request_submitter_submitted_idx", table_name="approval_request")
     op.drop_index("approval_request_tenant_status_submitted_idx", table_name="approval_request")
     op.drop_table("approval_request")
+    op.drop_table("user_session")

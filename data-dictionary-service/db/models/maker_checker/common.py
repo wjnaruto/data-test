@@ -14,6 +14,7 @@ ALEMBIC_TRACKED_TABLES = {
     "attribute_entity_pending",
     "table_entity_history",
     "attribute_entity_history",
+    "user_session",
 }
 
 
@@ -41,4 +42,3 @@ sa.Table(
     sa.Column("id", sa.String(length=36), primary_key=True),
     extend_existing=True,
 )
-
